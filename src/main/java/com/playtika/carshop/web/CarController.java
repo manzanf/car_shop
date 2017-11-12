@@ -1,64 +1,57 @@
 package com.playtika.carshop.web;
 
-import com.cedarsoftware.util.io.JsonWriter;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.playtika.carshop.domain.Car;
 import com.playtika.carshop.domain.CarDeal;
-import com.playtika.carshop.domain.CarDetails;
-import com.playtika.carshop.domain.SaleDetails;
+import com.playtika.carshop.domain.SaleInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
-
-import static org.springframework.web.bind.annotation.RequestMethod.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @RestController
 @RequestMapping("/cars")
 public class CarController {
     public static final Logger LOG = LoggerFactory.getLogger(CarController.class);
+    private final AtomicLong id = new AtomicLong();
+    private final Map<Long, CarDeal> carDeals = new ConcurrentHashMap<>();
 
-    private Map<Long, CarDeal> carDeals = new HashMap<>();
-
-    @RequestMapping(method = GET)
+    @GetMapping
     public Collection<CarDeal> getAllCars() {
         return carDeals.values();
     }
 
-    @RequestMapping(value = "/{id}", method = GET)
-    public ResponseEntity<SaleDetails> getCarDetailsById(@PathVariable("id") Long id) {
+    @GetMapping(value = "/{id}")
+    public SaleInfo getSaleInfoById(@PathVariable("id") Long id) throws CarNotFoundException {
         if (carDeals.get(id) == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+            throw new CarNotFoundException();
         } else {
-            return new ResponseEntity<>(carDeals.get(id).getSaleDetails(), HttpStatus.OK);
+            return carDeals.get(id).getSaleInfo();
         }
     }
 
-    @RequestMapping(value = "/{id}", method = DELETE)
-    public ResponseEntity<HttpStatus> deleteCarById(@PathVariable("id") Long id) {
-        if (carDeals.get(id) == null) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        } else {
-            carDeals.remove(id);
-            return new ResponseEntity<>(HttpStatus.OK);
-        }
+    @DeleteMapping(value = "/{id}")
+    public void deleteCarDealById(@PathVariable("id") Long id) {
+        carDeals.remove(id);
     }
 
-    @RequestMapping(method = POST, consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<Long> addCar(@RequestBody CarDetails carDetails,
-                                       @RequestParam("carPrice") BigDecimal carPrice,
-                                       @RequestParam("sellerContacts") String sellerContacts) {
+    @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
+    public Long addCarDeal(@RequestBody Car car,
+                       @RequestParam("price") int price,
+                       @RequestParam("sellerContacts") String sellerContacts)
+            throws JsonProcessingException {
         CarDeal newCarDeal = new CarDeal();
-        newCarDeal.setCarDetails(carDetails);
-        newCarDeal.setSaleDetails(new SaleDetails(sellerContacts, carPrice));
-        newCarDeal.setID(System.currentTimeMillis());
-        carDeals.put(newCarDeal.getID(), newCarDeal);
-        LOG.info("{}", JsonWriter.toJson(newCarDeal));
-        return new ResponseEntity<>(newCarDeal.getID(), HttpStatus.OK);
+        newCarDeal.setCar(car);
+        newCarDeal.setSaleInfo(new SaleInfo(sellerContacts, price));
+        newCarDeal.setId(id.incrementAndGet());
+        carDeals.put(newCarDeal.getId(), newCarDeal);
+        LOG.info("New deal was added: {}", new ObjectMapper().writeValueAsString(newCarDeal));
+        return newCarDeal.getId();
     }
 }

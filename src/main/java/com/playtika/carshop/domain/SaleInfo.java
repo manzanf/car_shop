@@ -2,12 +2,13 @@ package com.playtika.carshop.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import java.math.BigDecimal;
+import lombok.NonNull;
 
 @Data
 @AllArgsConstructor
-public class SaleDetails {
+public class SaleInfo {
+    @NonNull
     private String sellerContacts;
-    private BigDecimal carPrice;
+
+    private int price;
 }
