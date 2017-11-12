@@ -1,0 +1,24 @@
+[
+  {
+    "id": 1,
+    "saleInfo": {
+      "sellerContacts": "tomasMann@gmail.com",
+      "price": 19284
+    },
+    "car": {
+      "color": "red",
+      "model": "GT23"
+    }
+  },
+  {
+    "id": 2,
+    "saleInfo": {
+      "sellerContacts": "henrichFitch@gmail.com",
+      "price":  27362
+    },
+    "car": {
+      "color": "green",
+      "model": "HN23"
+    }
+  }
+]
