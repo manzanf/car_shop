@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -29,37 +30,32 @@ public class CarControllerAPITest {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).build();
     }
 
-    @Test()
-    public void allAddedCarDealsAreReturnedToClient() throws Exception {
-        mockMvc.perform(post("/cars")
-                .content("{\"color\":\"red\", \"model\":\"GT23\"}")
-                .param("price", "19284")
-                .param("sellerContacts", "tomasMann@gmail.com")
-                .contentType("application/json;charset=UTF-8"))
+    @Test
+    public void carDealCouldBeAdded() throws Exception {
+        addCarDeal("tom@gmail.com")
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"));
-        mockMvc.perform(post("/cars")
-                .content("{\"color\":\"green\", \"model\":\"HN23\"}")
-                .param("price", "27362")
-                .param("sellerContacts", "henrichFitch@gmail.com")
-                .contentType("application/json;charset=UTF-8"))
+    }
+
+    @Test
+    public void allAddedCarDealsAreReturnedToClient() throws Exception {
+        addCarDeal("tom@gmail.com")
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json;charset=UTF-8"));
+        addCarDeal("mike@gmail.com")
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"));
         mockMvc.perform(get("/cars")
                 .contentType("application/json;charset=UTF-8"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(allOf(
-                        containsString("HN23"),
-                        containsString("GT23"))));
+                        containsString("tom@gmail.com"),
+                        containsString("mike@gmail.com"))));
     }
 
     @Test
     public void carDealCouldBeDeleted() throws Exception {
-        String response = mockMvc.perform(post("/cars")
-                .content("{\"color\":\"red\", \"model\":\"GT23\"}")
-                .param("price", "19284")
-                .param("sellerContacts", "tomasMann@gmail.com")
-                .contentType("application/json;charset=UTF-8"))
+        String response = addCarDeal("tom@gmail.com")
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
                 .andReturn().getResponse().getContentAsString();
@@ -67,8 +63,26 @@ public class CarControllerAPITest {
         mockMvc.perform(delete("/cars/{id}", id)
                 .contentType("application/json;charset=UTF-8"))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    public void saleInfoCanBeRetrieved() throws Exception {
+        String response = addCarDeal("tom@gmail.com")
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json;charset=UTF-8"))
+                .andReturn().getResponse().getContentAsString();
+        long id = Long.parseLong(response);
         mockMvc.perform(get("/cars/{id}", id)
                 .contentType("application/json;charset=UTF-8"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/json;charset=UTF-8"));
+    }
+
+    private ResultActions addCarDeal(String sellerContacts) throws Exception {
+        return mockMvc.perform(post("/cars")
+                .content("{\"color\":\"red\", \"model\":\"GT23\"}")
+                .param("price", "10")
+                .param("sellerContacts", sellerContacts)
+                .contentType("application/json;charset=UTF-8"));
     }
 }

@@ -1,17 +1,15 @@
 package com.playtika.carshop.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.playtika.carshop.domain.Car;
 import com.playtika.carshop.domain.CarDeal;
 import com.playtika.carshop.domain.SaleInfo;
-import com.playtika.carshop.web.CarNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -22,13 +20,13 @@ public class CarDealServiceImpl implements CarDealService {
     private final Map<Long, CarDeal> carDeals = new ConcurrentHashMap<>();
 
     @Override
-    public Long addCarDeal(Car car, String sellerContacts, int price) throws JsonProcessingException {
+    public Long addCarDeal(Car car, String sellerContacts, int price) {
         CarDeal newCarDeal = new CarDeal();
         newCarDeal.setCar(car);
         newCarDeal.setSaleInfo(new SaleInfo(sellerContacts, price));
         newCarDeal.setId(id.incrementAndGet());
         carDeals.put(newCarDeal.getId(), newCarDeal);
-        LOG.info("New deal was added: {}", new ObjectMapper().writeValueAsString(newCarDeal));
+        LOG.info("New deal was added: {}", newCarDeal);
         return newCarDeal.getId();
     }
 
@@ -38,16 +36,12 @@ public class CarDealServiceImpl implements CarDealService {
     }
 
     @Override
-    public SaleInfo getSaleInfoById(Long id) throws CarNotFoundException {
-        if (carDeals.get(id) == null) {
-            throw new CarNotFoundException();
-        } else {
-            return carDeals.get(id).getSaleInfo();
-        }
+    public Optional<SaleInfo> getSaleInfoById(Long id) {
+        return Optional.ofNullable(carDeals.get(id)).map(CarDeal::getSaleInfo);
     }
 
     @Override
-    public void deleteCarDealById(Long id) {
-        carDeals.remove(id);
+    public boolean deleteCarDealById(Long id) {
+        return carDeals.remove(id) != null;
     }
 }

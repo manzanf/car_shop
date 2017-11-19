@@ -1,11 +1,12 @@
 package com.playtika.carshop.web;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.playtika.carshop.domain.Car;
 import com.playtika.carshop.domain.CarDeal;
 import com.playtika.carshop.domain.SaleInfo;
 import com.playtika.carshop.service.CarDealService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collection;
@@ -27,19 +28,21 @@ public class CarController {
 
     @GetMapping(value = "/{id}")
     public SaleInfo getSaleInfoById(@PathVariable("id") long id) throws CarNotFoundException {
-        return service.getSaleInfoById(id);
+        return service.getSaleInfoById(id).orElseThrow(CarNotFoundException::new);
     }
 
     @DeleteMapping(value = "/{id}")
-    public void deleteCarDealById(@PathVariable("id") long id) {
-        service.deleteCarDealById(id);
+    public  ResponseEntity<HttpStatus> deleteCarDealById(@PathVariable("id") long id) {
+        if (!service.deleteCarDealById(id)) {
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        } else
+            return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public Long addCarDeal(@RequestBody Car car,
                            @RequestParam("price") int price,
-                           @RequestParam("sellerContacts") String sellerContacts)
-            throws JsonProcessingException {
+                           @RequestParam("sellerContacts") String sellerContacts) {
         return service.addCarDeal(car, sellerContacts, price);
     }
 }
