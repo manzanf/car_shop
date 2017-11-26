@@ -23,7 +23,7 @@ public class CarController {
 
     @GetMapping
     public Collection<CarDeal> getAllCars() {
-        return service.getAllCars();
+        return service.getAllCarDeals();
     }
 
     @GetMapping(value = "/{id}")
@@ -41,7 +41,7 @@ public class CarController {
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     public Long addCarDeal(@RequestBody Car car,
-                           @RequestParam("price") int price,
+                           @RequestParam("price") long price,
                            @RequestParam("sellerContacts") String sellerContacts) {
         return service.addCarDeal(car, sellerContacts, price);
     }

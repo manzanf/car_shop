@@ -8,9 +8,9 @@ import java.util.Collection;
 import java.util.Optional;
 
 public interface CarDealService {
-    Long addCarDeal(Car car, String sellerContacts, int price);
+    Long addCarDeal(Car car, String sellerContacts, long price);
 
-    Collection<CarDeal> getAllCars();
+    Collection<CarDeal> getAllCarDeals();
 
     Optional<SaleInfo> getSaleInfoById(Long id);
 

@@ -102,7 +102,7 @@ public class CarControllerTest {
     public void allCarDealsAreReturned() throws Exception {
         deals.put(1L, new CarDeal(1L, new SaleInfo("tomasMann@gmail.com", 19284), new Car("red", "GT23")));
         deals.put(2L, new CarDeal(2L, new SaleInfo("henrichFitch@gmail.com", 27362), new Car("green", "HN23")));
-        when(service.getAllCars()).thenReturn(deals.values());
+        when(service.getAllCarDeals()).thenReturn(deals.values());
         String response = Resources.toString(getResource("messages/getAllCarsResponse.json"), UTF_8);
         mockMvc.perform(get("/cars")
                 .contentType("application/json;charset=UTF-8"))
@@ -113,7 +113,7 @@ public class CarControllerTest {
 
     @Test
     public void IfThereAreNoCarDealsThenReturnEmptyCollection() throws Exception {
-        when(service.getAllCars()).thenReturn(Collections.emptyList());
+        when(service.getAllCarDeals()).thenReturn(Collections.emptyList());
         assertThat(controller.getAllCars(), is(equalTo(Collections.emptyList())));
     }
 

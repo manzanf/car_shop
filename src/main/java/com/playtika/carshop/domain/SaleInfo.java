@@ -10,5 +10,5 @@ public class SaleInfo {
     @NonNull
     private String sellerContacts;
 
-    private int price;
+    private long price;
 }
