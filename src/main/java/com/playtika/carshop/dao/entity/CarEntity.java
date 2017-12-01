@@ -1,15 +1,15 @@
 package com.playtika.carshop.dao.entity;
 
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.util.List;
 
 @Entity
-@Table(name = "car")
-@Data
+@Getter
 @NoArgsConstructor
+@Table(name = "car")
 public class CarEntity {
     @Id @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;

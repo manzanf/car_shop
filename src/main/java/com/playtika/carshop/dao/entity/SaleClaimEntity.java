@@ -1,20 +1,20 @@
 package com.playtika.carshop.dao.entity;
 
 import com.playtika.carshop.dao.entity.status.SaleStatus;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.util.List;
 
 @Entity
+@Getter
 @Table(name = "sale_claim")
-@Data
 @NoArgsConstructor
 public class SaleClaimEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    private long id;
+    private Long id;
 
     @ManyToOne
     private CarEntity car;

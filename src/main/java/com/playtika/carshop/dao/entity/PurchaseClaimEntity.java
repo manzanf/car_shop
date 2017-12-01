@@ -1,13 +1,13 @@
 package com.playtika.carshop.dao.entity;
 
 import com.playtika.carshop.dao.entity.status.PurchaseClaimStatus;
-import lombok.Data;
+import lombok.Getter;
 
 import javax.persistence.*;
 
 @Entity
+@Getter
 @Table(name = "purchase_claim")
-@Data
 public class PurchaseClaimEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)

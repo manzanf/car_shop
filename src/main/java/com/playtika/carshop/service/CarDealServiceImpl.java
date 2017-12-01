@@ -16,7 +16,6 @@ import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
 import java.util.Collection;
-import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -36,33 +35,33 @@ public class CarDealServiceImpl implements CarDealService {
     public Long addCarDeal(Car car, String sellerContacts, long price) {
         SellerEntity sellerEntity = addSellerIfNotExists(sellerContacts);
         CarEntity carEntity = addCarIfNotExists(car);
-        return createSaleClaimAndGetId(price, carEntity, sellerEntity);
+        try {
+            return createSaleClaimAndGetId(price, carEntity, sellerEntity);
+        } catch (PersistenceException e) {
+            LOG.warn("The car deal was already added for {}, {}", carEntity, e);
+            throw new IllegalArgumentException("The car deal was already added for the car");
+        }
     }
 
     private SellerEntity addSellerIfNotExists(String sellerContacts) {
-        SellerEntity seller;
         try {
-            long sellerId = (long) em.createQuery("select s.id from SellerEntity s where s.email = :contacts")
+            return em.createQuery("select s from SellerEntity s where s.email = :contacts", SellerEntity.class)
                     .setParameter("contacts", sellerContacts)
                     .getSingleResult();
-            seller = em.find(SellerEntity.class, sellerId);
         } catch (NoResultException e) {
-            seller = createSeller(sellerContacts);
+            return createSeller(sellerContacts);
         }
-        return seller;
+
     }
 
     private CarEntity addCarIfNotExists(Car car) {
-        CarEntity carEntity;
         try {
-            long carId = (long) em.createQuery("select c.id from CarEntity c WHERE c.number = :model")
+            return em.createQuery("select c from CarEntity c WHERE c.number = :model", CarEntity.class)
                     .setParameter("model", car.getModel())
                     .getSingleResult();
-            carEntity = em.find(CarEntity.class, carId);
         } catch (NoResultException e) {
-            carEntity = createCar(car);
+            return createCar(car);
         }
-        return carEntity;
     }
 
     private CarEntity createCar(Car car) {
@@ -78,21 +77,15 @@ public class CarDealServiceImpl implements CarDealService {
     }
 
     private Long createSaleClaimAndGetId(long price, CarEntity carEntity, SellerEntity sellerEntity) {
-        try {
-            SaleClaimEntity saleClaimEntity = new SaleClaimEntity(carEntity, price, sellerEntity);
-            em.persist(saleClaimEntity);
-            return saleClaimEntity.getId();
-        } catch (PersistenceException e) {
-            LOG.warn("The car deal was already added {}", e);
-            return 0L;
-        }
+        SaleClaimEntity saleClaimEntity = new SaleClaimEntity(carEntity, price, sellerEntity);
+        em.persist(saleClaimEntity);
+        return saleClaimEntity.getId();
     }
 
     @Override
     public Collection<CarDeal> getAllCarDeals() {
-        List<SaleClaimEntity> saleClaims = em.createQuery("select sc from SaleClaimEntity sc")
-                .getResultList();
-        return saleClaims.stream()
+        return em.createQuery("select sc from SaleClaimEntity sc", SaleClaimEntity.class)
+                .getResultList().stream()
                 .map(CarDealServiceImpl::getCarDeal)
                 .collect(Collectors.toList());
     }
@@ -108,10 +101,9 @@ public class CarDealServiceImpl implements CarDealService {
         SaleClaimEntity saleClaimEntity = em.find(SaleClaimEntity.class, id);
         if (saleClaimEntity == null) {
             return Optional.empty();
-        } else {
-            SaleInfo saleInfo = new SaleInfo(saleClaimEntity.getSeller().getEmail(), saleClaimEntity.getPrice());
-            return Optional.of(saleInfo);
         }
+        SaleInfo saleInfo = new SaleInfo(saleClaimEntity.getSeller().getEmail(), saleClaimEntity.getPrice());
+        return Optional.of(saleInfo);
     }
 
     @Override
