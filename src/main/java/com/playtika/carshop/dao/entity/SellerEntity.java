@@ -11,7 +11,8 @@ import java.util.List;
 @Table(name = "seller")
 @NoArgsConstructor
 public class SellerEntity {
-    @Id  @GeneratedValue(strategy = GenerationType.AUTO)
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     private String email;

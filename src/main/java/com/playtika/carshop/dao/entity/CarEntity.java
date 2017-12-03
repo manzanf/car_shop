@@ -11,7 +11,8 @@ import java.util.List;
 @NoArgsConstructor
 @Table(name = "car")
 public class CarEntity {
-    @Id @GeneratedValue(strategy = GenerationType.AUTO)
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
     private String number;

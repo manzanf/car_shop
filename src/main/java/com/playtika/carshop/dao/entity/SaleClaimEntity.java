@@ -3,12 +3,13 @@ package com.playtika.carshop.dao.entity;
 import com.playtika.carshop.dao.entity.status.SaleStatus;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.List;
 
 @Entity
-@Getter
+@Getter @Setter
 @Table(name = "sale_claim")
 @NoArgsConstructor
 public class SaleClaimEntity {

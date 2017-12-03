@@ -1,5 +1,8 @@
 package com.playtika.carshop.service;
 
+import com.playtika.carshop.dao.CarEntityRepository;
+import com.playtika.carshop.dao.SaleClaimEntityRepository;
+import com.playtika.carshop.dao.SellerEntityRepository;
 import com.playtika.carshop.dao.entity.CarEntity;
 import com.playtika.carshop.dao.entity.SaleClaimEntity;
 import com.playtika.carshop.dao.entity.SellerEntity;
@@ -10,25 +13,26 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import javax.persistence.EntityManager;
-import javax.persistence.NoResultException;
-import javax.persistence.PersistenceContext;
 import javax.persistence.PersistenceException;
 import javax.transaction.Transactional;
 import java.util.Collection;
 import java.util.Optional;
-import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.toList;
 
 @Service
 @Transactional
 public class CarDealServiceImpl implements CarDealService {
     public static final Logger LOG = LoggerFactory.getLogger(CarDealService.class);
 
-    @PersistenceContext
-    private EntityManager em;
+    private final CarEntityRepository carRepository;
+    private final SellerEntityRepository sellerRepository;
+    private final SaleClaimEntityRepository saleRepository;
 
-    public CarDealServiceImpl(EntityManager em) {
-        this.em = em;
+    CarDealServiceImpl(CarEntityRepository carRepository, SellerEntityRepository sellerRepository, SaleClaimEntityRepository saleRepository) {
+        this.carRepository = carRepository;
+        this.sellerRepository = sellerRepository;
+        this.saleRepository = saleRepository;
     }
 
     @Override
@@ -44,50 +48,41 @@ public class CarDealServiceImpl implements CarDealService {
     }
 
     private SellerEntity addSellerIfNotExists(String sellerContacts) {
-        try {
-            return em.createQuery("select s from SellerEntity s where s.email = :contacts", SellerEntity.class)
-                    .setParameter("contacts", sellerContacts)
-                    .getSingleResult();
-        } catch (NoResultException e) {
+        SellerEntity seller = sellerRepository.findByEmail(sellerContacts);
+        if (seller == null) {
             return createSeller(sellerContacts);
         }
-
+        return seller;
     }
 
     private CarEntity addCarIfNotExists(Car car) {
-        try {
-            return em.createQuery("select c from CarEntity c WHERE c.number = :model", CarEntity.class)
-                    .setParameter("model", car.getModel())
-                    .getSingleResult();
-        } catch (NoResultException e) {
+        CarEntity carEntity = carRepository.findByNumber(car.getModel());
+        if (carEntity == null) {
             return createCar(car);
         }
+        return carEntity;
     }
 
     private CarEntity createCar(Car car) {
-        CarEntity carEntity = new CarEntity(car.getModel(), car.getColor(), 2016, "BMV");
-        em.persist(carEntity);
-        return carEntity;
+        CarEntity carEntity = new CarEntity(car.getModel(), car.getColor(), 2016, "BMW");
+        return carRepository.save(carEntity);
     }
 
     private SellerEntity createSeller(String sellerContacts) {
         SellerEntity createdSeller = new SellerEntity(sellerContacts);
-        em.persist(createdSeller);
-        return createdSeller;
+        return sellerRepository.save(createdSeller);
     }
 
     private Long createSaleClaimAndGetId(long price, CarEntity carEntity, SellerEntity sellerEntity) {
         SaleClaimEntity saleClaimEntity = new SaleClaimEntity(carEntity, price, sellerEntity);
-        em.persist(saleClaimEntity);
-        return saleClaimEntity.getId();
+       return saleRepository.save(saleClaimEntity).getId();
     }
 
     @Override
     public Collection<CarDeal> getAllCarDeals() {
-        return em.createQuery("select sc from SaleClaimEntity sc", SaleClaimEntity.class)
-                .getResultList().stream()
+        return saleRepository.findAll().stream()
                 .map(CarDealServiceImpl::getCarDeal)
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
     private static CarDeal getCarDeal(SaleClaimEntity sc) {
@@ -98,7 +93,7 @@ public class CarDealServiceImpl implements CarDealService {
 
     @Override
     public Optional<SaleInfo> getSaleInfoById(Long id) {
-        SaleClaimEntity saleClaimEntity = em.find(SaleClaimEntity.class, id);
+        SaleClaimEntity saleClaimEntity = saleRepository.findOne(id);
         if (saleClaimEntity == null) {
             return Optional.empty();
         }
@@ -108,12 +103,12 @@ public class CarDealServiceImpl implements CarDealService {
 
     @Override
     public boolean deleteCarDealById(Long id) {
-        int result = em.createQuery("delete from SaleClaimEntity sc where sc.id=:id")
-                .setParameter("id", id)
-                .executeUpdate();
-        // em.remove(em.getReference(SaleClaimEntity.class, id));
-        //return result;
-        return result == 1;
-
+        try {
+            saleRepository.delete(id);
+            return true;
+        } catch (IllegalArgumentException e) {
+            LOG.error("CarDeal {} was not deleted", id);
+            return false;
+        }
     }
 }
