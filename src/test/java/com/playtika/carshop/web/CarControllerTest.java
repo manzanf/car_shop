@@ -61,6 +61,18 @@ public class CarControllerTest {
     }
 
     @Test
+    public void ifCarDealWasAlreadyAddedReturnNoContent() throws Exception {
+        when(service.addCarDeal(new Car("red", "GT23"), "tomasMann@gmail.com", 19284))
+                .thenThrow(IllegalArgumentException.class);
+        mockMvc.perform(post("/cars")
+                .content("{\"color\":\"red\", \"model\":\"GT23\"}")
+                .param("price", "19284")
+                .param("sellerContacts", "tomasMann@gmail.com")
+                .contentType("application/json;charset=UTF-8"))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
     public void ifPriceIsMissedThenThrowException() throws Exception {
         mockMvc.perform(post("/cars")
                 .content("{\"color\":\"red\", \"model\":\"GT23\"}")
