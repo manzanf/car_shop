@@ -1,0 +1,6 @@
+<dataset>
+    <PURCHASE_CLAIM id="1" car_id="1" price="23000" status="declined" sale_claim_id="1"/>
+    <CAR id="1" number="GT23HH" brand="BMW" year="2015" color="red"/>
+    <SALE_CLAIM id="1" car_id="1" price="50500" seller_id="1" status="open"/>
+    <SELLER id="1" email="tom"/>
+</dataset>

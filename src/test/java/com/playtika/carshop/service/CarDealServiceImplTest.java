@@ -1,27 +1,31 @@
 package com.playtika.carshop.service;
 
 import com.playtika.carshop.dao.CarEntityRepository;
+import com.playtika.carshop.dao.PurchaseClaimEntityRepository;
 import com.playtika.carshop.dao.SaleClaimEntityRepository;
 import com.playtika.carshop.dao.SellerEntityRepository;
 import com.playtika.carshop.dao.entity.CarEntity;
+import com.playtika.carshop.dao.entity.PurchaseClaimEntity;
 import com.playtika.carshop.dao.entity.SaleClaimEntity;
 import com.playtika.carshop.dao.entity.SellerEntity;
-import com.playtika.carshop.domain.Car;
-import com.playtika.carshop.domain.CarDeal;
-import com.playtika.carshop.domain.SaleInfo;
+import com.playtika.carshop.dao.entity.status.SaleStatus;
+import com.playtika.carshop.domain.*;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.runners.MockitoJUnitRunner;
 
+import java.rmi.NoSuchObjectException;
 import java.util.List;
 import java.util.Optional;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
-import static org.hamcrest.CoreMatchers.*;
+import static org.hamcrest.CoreMatchers.equalTo;
+import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
@@ -36,14 +40,19 @@ public class CarDealServiceImplTest {
     private SellerEntityRepository sellerRepository;
     @Mock
     private SaleClaimEntityRepository saleRepository;
+    @Mock
+    private PurchaseClaimEntityRepository purchaseRepository;
 
     private Car car = new Car("red", "GT23");
     private CarEntity carEntity = new CarEntity("GT23", "red", 2015, "BMW");
     private SellerEntity sellerEntity = new SellerEntity("tom");
+    private long price = 23000L;
+    private SaleClaimEntity sale = new SaleClaimEntity(carEntity, price, sellerEntity);
+    private PurchaseClaimEntity purchaseEntity = new PurchaseClaimEntity(carEntity, 23000L, sale);
 
     @Before
     public void setUp() throws Exception {
-        service = new CarDealServiceImpl(carRepository, sellerRepository, saleRepository);
+        service = new CarDealServiceImpl(carRepository, sellerRepository, saleRepository, purchaseRepository);
     }
 
     @Test
@@ -90,13 +99,13 @@ public class CarDealServiceImplTest {
     @Test
     public void saleInfoIsReturnedById() {
         addDealWithPrice(10L);
-        addDealWithPrice(20L);
-        when(saleRepository.findOne(2L)).thenReturn(createSaleClaimEntity(20L));
-        assertThat(service.getSaleInfoById(2L), is(equalTo(Optional.of(createSaleInfo(20)))));
+        addDealWithPrice(price);
+        when(saleRepository.findOne(2L)).thenReturn(sale);
+        assertThat(service.getSaleInfoById(2L), is(equalTo(Optional.of(createSaleInfo(price)))));
     }
 
     @Test
-    public void ifCarDealNotFoundByIdThenReturnEmptyOptional() {
+    public void ifCarDealNotFoundByIdReturnEmptyOptional() {
         when(saleRepository.findOne(1L)).thenReturn(null);
         assertThat(service.getSaleInfoById(1L), is(equalTo(Optional.empty())));
     }
@@ -108,9 +117,71 @@ public class CarDealServiceImplTest {
     }
 
     @Test
-    public void ifCarDealIsAbsentThenDeleteDoNothing() {
+    public void ifCarDealIsAbsentDeleteDoNothing() {
         doNothing().when(saleRepository).delete(1L);
         assertThat(service.deleteCarDealById(1L), is(equalTo(true)));
+    }
+
+    @Test
+    public void purchaseClaimCouldBeAdded() throws Exception {
+        when(saleRepository.findOne(2L)).thenReturn(sale);
+        when(purchaseRepository.save(notNull(PurchaseClaimEntity.class))).thenReturn(purchaseEntity);
+        purchaseEntity.setId(1L);
+        Long actual = service.addPurchase(2L, price);
+        assertThat(actual, is(1L));
+    }
+
+    @Test(expected = NoSuchObjectException.class)
+    public void ifPurchaseClaimWasNotAddedThrowNoSuchObjectException() throws Exception {
+        when(saleRepository.findOne(2L)).thenReturn(null);
+        service.addPurchase(2L, price);
+    }
+
+    @Test
+    public void ifPurchaseClaimWasRejectedReturnTrue() {
+        when(purchaseRepository.findOne(1L)).thenReturn(purchaseEntity);
+        when(purchaseRepository.save(notNull(PurchaseClaimEntity.class))).thenReturn(purchaseEntity);
+        assertThat(service.rejectPurchaseClaim(1L), is(equalTo(true)));
+    }
+
+    @Test
+    public void ifPurchaseClaimWasNotRejectedReturnFalse() {
+        when(purchaseRepository.findOne(1L)).thenReturn(null);
+        assertThat(service.rejectPurchaseClaim(1L), is(equalTo(false)));
+    }
+
+    @Test
+    public void bestBidIsReturnedWithAcceptedState() throws Exception {
+        when(saleRepository.findOne(1L)).thenReturn(sale);
+        when(purchaseRepository.findMaxPriceBySaleClaimId(1L)).thenReturn(24000L);
+        when(purchaseRepository.findByPriceAndSaleClaimId(24000L, 1L)).thenReturn(purchaseEntity);
+        when(saleRepository.save(notNull(SaleClaimEntity.class))).thenReturn(sale);
+        when(purchaseRepository.save(notNull(PurchaseClaimEntity.class))).thenReturn(purchaseEntity);
+        PriceWithState actual = service.acceptBestPurchaseClaim(1L);
+        assertThat(actual, is(equalTo(new PriceWithState(24000L, AcceptBidState.ACCEPTED))));
+    }
+
+    @Test
+    public void ifNoCarDealReturnNoCarDealState() throws Exception {
+        when(saleRepository.findOne(1L)).thenReturn(null);
+        AcceptBidState state = service.acceptBestPurchaseClaim(1L).getState();
+        assertThat(state, is(equalTo(AcceptBidState.NO_CAR_DEAL)));
+    }
+
+    @Test
+    public void ifCarDealWasClosedReturnAlreadyClosedCarDealState() throws Exception {
+        sale.setStatus(SaleStatus.closed);
+        when(saleRepository.findOne(1L)).thenReturn(sale);
+        AcceptBidState state = service.acceptBestPurchaseClaim(1L).getState();
+        assertThat(state, is(equalTo(AcceptBidState.ALREADY_CLOSED_CAR_DEAL)));
+    }
+
+    @Test
+    public void ifPurchaseClaimsWereNotFoundReturnNoPurchaseClaimsState() throws Exception {
+        when(saleRepository.findOne(1L)).thenReturn(sale);
+        when(purchaseRepository.findMaxPriceBySaleClaimId(1L)).thenReturn(null);
+        AcceptBidState state = service.acceptBestPurchaseClaim(1L).getState();
+        assertThat(state, is(equalTo(AcceptBidState.NO_PURCHASE_CLAIMS)));
     }
 
     private Long addDealWithPrice(Long price) {

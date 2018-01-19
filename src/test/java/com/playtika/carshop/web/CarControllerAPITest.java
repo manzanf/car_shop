@@ -12,8 +12,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-import static org.hamcrest.CoreMatchers.allOf;
-import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -68,7 +68,7 @@ public class CarControllerAPITest {
     }
 
     @Test
-    public void saleInfoCanBeRetrieved() throws Exception {
+    public void saleInfoCouldBeRetrieved() throws Exception {
         String response = addCarDeal("tom@gmail.com")
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"))
@@ -78,6 +78,47 @@ public class CarControllerAPITest {
                 .contentType("application/json;charset=UTF-8"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/json;charset=UTF-8"));
+    }
+
+    @Test
+    public void ifPurchaseClaimWasAddedReturnOkStatus() throws Exception {
+        String carDealId = addCarDeal("tom").andReturn().getResponse().getContentAsString();
+        mockMvc.perform(post("/purchase")
+                .param("carDealId", carDealId)
+                .param("price", "23000")
+                .contentType("application/json;charset=UTF-8"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(("application/json;charset=UTF-8")));
+    }
+
+    @Test
+    public void ifPurchaseClaimWasRejectedReturnOkStatus() throws Exception {
+        String carDealId = addCarDeal("tom").andReturn().getResponse().getContentAsString();
+        String purchaseClaimId = mockMvc.perform(post("/purchase")
+                .param("carDealId", carDealId)
+                .param("price", "23000")
+                .contentType("application/json;charset=UTF-8"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        mockMvc.perform(post("/purchase/reject")
+                .param("purchaseClaimId", purchaseClaimId)
+                .contentType("application/json;charset=UTF-8"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    public void bidShouldBeReturned() throws Exception {
+        String carDealId = addCarDeal("tom").andReturn().getResponse().getContentAsString();
+        mockMvc.perform(post("/purchase")
+                .param("carDealId", carDealId)
+                .param("price", "23000")
+                .contentType("application/json;charset=UTF-8"))
+                .andExpect(status().isOk());
+        String response = mockMvc.perform(get("/cars/bestBid")
+                .param("carDealId", carDealId)
+                .contentType("application/json;charset=UTF-8"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(response, is(equalTo("{\"price\":23000,\"state\":\"ACCEPTED\"}")));
     }
 
     private ResultActions addCarDeal(String sellerContacts) throws Exception {

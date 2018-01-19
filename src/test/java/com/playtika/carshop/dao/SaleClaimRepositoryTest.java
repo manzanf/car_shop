@@ -3,6 +3,7 @@ package com.playtika.carshop.dao;
 import com.github.database.rider.core.api.dataset.DataSet;
 import com.github.database.rider.core.api.dataset.ExpectedDataSet;
 import com.playtika.carshop.dao.entity.SaleClaimEntity;
+import com.playtika.carshop.dao.entity.status.SaleStatus;
 import org.junit.Test;
 import org.springframework.test.annotation.Commit;
 
@@ -38,7 +39,17 @@ public class SaleClaimRepositoryTest extends AbstractEntityTest<SaleClaimEntityR
 
     @Test
     @DataSet(value = "datasets/sale_claim.xml", disableConstraints = true)
-    public void ifNoSaleClaimByIdReturnNull() {
+    public void ifNoSaleClaimByIdFoundReturnNull() {
         assertThat(dao.findOne(5L), equalTo(null));
+    }
+
+    @Test
+    @DataSet(value = "datasets/sale_claim.xml", disableConstraints = true)
+    @ExpectedDataSet(value = "datasets/sale_claim_closed.xml")
+    @Commit
+    public void closedStatusCouldBeSetForSaleClaim() {
+        SaleClaimEntity claim = dao.findOne(1L);
+        claim.setStatus(SaleStatus.closed);
+        dao.save(claim);
     }
 }
